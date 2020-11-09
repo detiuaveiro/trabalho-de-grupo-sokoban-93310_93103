@@ -11,52 +11,51 @@
 
 import math
 from tree_search import *
-
+from mapa import Map
+from algorithms import *
+from consts import Tiles
 class Sokoban(SearchDomain):
-    def __init__(self):
-        pass
-    
-    def actions(self,node):
-        actlist = []
-        for (C1,C2,D) in self.connections:
-            if (C1==city):
-                actlist += [(C1,C2)]
-            elif (C2==city):
-               actlist += [(C2,C1)]
-        return actlist 
-    def result(self,city,action):
-        (C1,C2) = action
-        if C1==city:
-            return C2
-    def cost(self, city, action):
-        if action[0]!=city:
-            action = (action[1],action[0])
-        assert city==action[0]
-        for c1,c2,c in self.connections:
-            if (c1,c2)==action or (c2,c1)==action: 
-                return c
+	def __init__(self):
+		pass
+	
+	#pushes possiveis das caixas
+	def actions(self,node): #(x, y, dx, dy, d) action = (1, 3, 1, 2, 'w')
+		#node tem mapa e tens de ver os pushes das caixas
+		mapa=node.state
+		actions=[]
+		for box in mapa.boxes:
+			x,y=box
+			for dx,dy,l in [(-1,0,"a"),(1,0,"d"),(0,1,"s"),(0,-1,"w")]:
+				px=x+dx
+				py=y+dy
+				if mapa.get_tile((px,py))!=8 and breadth_first_search(mapa.keeper,(x-dx,y-dy),mapa):
+					actions.append((x,y,px,py,l))
+		return actions    
 
-    def heuristic(self, city, goal_city):
-        return math.sqrt((self.coordinates[city][0]-self.coordinates[goal_city][0])**2 +(self.coordinates[city][1]-self.coordinates[goal_city][1])**2)
-    
-    def satisfies(self, city, goal_city):
-        return goal_city==city
+	#move a caixa no mapa e retorna (hash(mapa.keeper),hash(frozenset(mapas.boxes))     
+	def result(self,mapa,action):
+		x, y, dx, dy, _ = action
+		cpos_box = x, y 
+		npos_box = dx, dy 
+		mapa.clear_tile(mapa.keeper)
+		mapa.clear_tile(cpos_box)
+		mapa.set_tile(cpos_box, Tiles.MAN)
+		mapa.set_tile(npos_box, Tiles.BOX)
+		return mapa
+ 
+	
+	# numero de passos entre nodes
+	def cost(self, mapa, action):
+		return 0
+	# distancias  
+	def heuristic(self, mapa):
+		return 0
 
+	def satisfies(self, mapa):
+		return mapa.completed
 
-
-
-p = SearchProblem(sokoban,'Braga','Faro')
-t = SearchTree(p,'depth')
-
-print(t.search())
-
-
-# Atalho para obter caminho de c1 para c2 usando strategy:
-def search_path(c1,c2,strategy):
-    my_prob = SearchProblem(cidades_portugal,c1,c2)
-    my_tree = SearchTree(my_prob)
-    my_tree.strategy = strategy
-    return my_tree.search()
-
-
-
+if __name__ == "__main__":
+	sokoban = Sokoban()
+	mapa = Map("./levels/1.xsb")
+	node = SearchNode(mapa,None,None,None,None)
+	print(sokoban.actions(node))

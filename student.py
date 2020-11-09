@@ -2,65 +2,50 @@ import asyncio
 import getpass
 import json
 import os
+import time
 
 import websockets
 from mapa import Map
 
 # Next 4 lines are not needed for AI agents, please remove them from your code!
-import pygame
-
-pygame.init()
-program_icon = pygame.image.load("data/icon2.png")
-pygame.display.set_icon(program_icon)
-
+from sokoban import Sokoban
+from tree_search import *
 
 async def agent_loop(server_address="localhost:8000", agent_name="student"):
-    async with websockets.connect(f"ws://{server_address}/player") as websocket:
+	async with websockets.connect(f"ws://{server_address}/player") as websocket:
 
-        # Receive information about static game properties
-        await websocket.send(json.dumps({"cmd": "join", "name": agent_name}))
-        msg = await websocket.recv()
-        game_properties = json.loads(msg)
+		# Receive information about static game properties
+		await websocket.send(json.dumps({"cmd": "join", "name": agent_name}))
+		
+		domain = Sokoban()
+		while True:
+			try:
+				update = json.loads(
+					await websocket.recv()
+				)  # receive game update, this must be called timely or your game will get out of sync with the server
 
-        # You can create your own map representation or use the game representation:
-        mapa = Map(game_properties["map"])
-        print(mapa)
+				if "map" in update:
+					# we got a new level
+					game_properties = update
+					mapa = Map(update["map"])
+					
+					p = SearchProblem(domain,mapa)
+					t = SearchTree(p,'a*')
 
-        while True:
-            try:
-                state = json.loads(
-                    await websocket.recv()
-                )  # receive game state, this must be called timely or your game will get out of sync with the server
+					for key in t.search():
+						print("key : ",key)
+						time.sleep(1)
+						await websocket.send(
+							json.dumps({"cmd": "key", "key": key})
+						)  # send key command to server - you must implement this send in the AI agent
 
-                # Next lines are only for the Human Agent, the key values are nonetheless the correct ones!
-                key = ""
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
+				else:
+					# we got a current map state update
+					state = update
 
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_UP:
-                            key = "w"
-                        elif event.key == pygame.K_LEFT:
-                            key = "a"
-                        elif event.key == pygame.K_DOWN:
-                            key = "s"
-                        elif event.key == pygame.K_RIGHT:
-                            key = "d"
-
-                        elif event.key == pygame.K_d:
-                            import pprint
-
-                            pprint.pprint(state)
-                            print(Map(f"levels/{state['level']}.xsb"))
-                        await websocket.send(
-                            json.dumps({"cmd": "key", "key": key})
-                        )  # send key command to server - you must implement this send in the AI agent
-                        break
-            except websockets.exceptions.ConnectionClosedOK:
-                print("Server has cleanly disconnected us")
-                return
-
+			except websockets.exceptions.ConnectionClosedOK:
+				print("Server has cleanly disconnected us")
+				return
 
 
 # DO NOT CHANGE THE LINES BELLOW

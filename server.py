@@ -180,7 +180,7 @@ if __name__ == "__main__":
     if args.seed > 0:
         random.seed(args.seed)
 
-    g = GameServer(args.level, args.timeout, args.grading_server)
+    g = GameServer(args.level, args.timeout)#, args.grading_server)
 
     game_loop_task = asyncio.ensure_future(g.mainloop())
 

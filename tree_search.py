@@ -11,9 +11,9 @@
 #  (c) Luis Seabra Lopes
 #  Introducao a Inteligencia Artificial, 2012-2019,
 #  Inteligência Artificial, 2014-2019
-
+from copy import deepcopy
 from abc import ABC, abstractmethod
-
+from algorithms import *
 # Dominios de pesquisa
 # Permitem calcular
 # as accoes possiveis em cada estado, etc
@@ -53,31 +53,35 @@ class SearchDomain(ABC):
 # Problemas concretos a resolver
 # dentro de um determinado dominio
 class SearchProblem:
-    def __init__(self, domain, initial, goal):
-        self.domain = domain
-        self.initial = initial
-        self.goal = goal
+    def __init__(self, domain, initial):
+        self.domain = domain # sokoban
+        self.initial = initial #mapa inicial
     def goal_test(self, state):
-        return self.domain.satisfies(state,self.goal)
+        return self.domain.satisfies(state)
+
 
 # Nos de uma arvore de pesquisa
 class SearchNode:
-    def __init__(self,state,parent,depth,cost,heuristic): 
-        self.state = state
-        self.parent = parent
+    def __init__(self,state,parent,depth,cost,heuristic,laction): 
+        self.state = state      #mapa deepcopy(mapa)
+        self.parent = parent    #node
         self.depth = depth
         self.cost = cost
         self.heuristic = heuristic
+        self.laction = laction
 
+        #node(asdiadjas,parent.depth+1,parent.cost+problem.domain.cost(mapa),p.doman.heuris(mapa))
+    
+    #pode ser melhorado a guardar todas as posicoes anteriores
     def in_parent(self,newstate):
         if self.parent == None:
             return False
         if self.parent.state ==newstate:
             return True
         return self.parent.in_parent(newstate)
-    
+
     def __str__(self):
-        return "no(" + str(self.state) + "," + str(self.parent) + ")"
+        return str(self.state)
     def __repr__(self):
         return str(self)
 
@@ -86,20 +90,30 @@ class SearchTree:
 
     # construtor
     def __init__(self,problem, strategy='breadth'): 
-        self.problem = problem
-        root = SearchNode(problem.initial, None,0,0,problem.domain.heuristic(problem.initial,problem.goal))
+        self.problem = problem          #search problem
+        root = SearchNode(problem.initial, None,0,0,problem.domain.heuristic(problem.initial),None)
         self.open_nodes = [root]
         self.strategy = strategy
         self.terminals = 1
         self.non_terminals = 0
+        self.solution=None
+        #set do backtrack  (hash(boxes),hash(keeper))
 
     # obter o caminho (sequencia de estados) da raiz ate um no
     def get_path(self,node):
         if node.parent == None:
-            return [node.state]
-        path = self.get_path(node.parent)
-        path += [node.state]
-        return(path)
+            return ""
+        x,y,xf,yf,l=node.laction
+        print(node)
+        px=xf-x
+        py=yf-y
+        path=depth_first_search(node.parent.state.keeper,(x-px,y-py),node.state)
+        print("path ",path)
+        path+=l
+        return self.get_path(node.parent)+path
+
+
+
     @property
     def length(self):
         return self.solution.depth
@@ -112,20 +126,25 @@ class SearchTree:
     def search(self,limit=None):
         while self.open_nodes != []:
             node = self.open_nodes.pop(0)
+            print(node.state)
             if self.problem.goal_test(node.state):
+                print("puaifjasfvauydvad\n\n\n\n\n\n")
                 self.solution = node
                 self.terminals = len(self.open_nodes)+1
                 return self.get_path(node)
             self.non_terminals += 1
             lnewnodes = []
-            for a in self.problem.domain.actions(node.state):
-                newstate = self.problem.domain.result(node.state,a)
-                newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate,self.problem.goal))
-                if not node.in_parent(newstate) and (limit is None or newnode.depth <=limit):
-                    lnewnodes.append(newnode)
+            for a in self.problem.domain.actions(node):
+                #deepcopy
+                print(a)
+                newstate = self.problem.domain.result(deepcopy(node.state),a)
+                newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a)
+                #backtrack 
+                #if limit is None or newnode.depth <=limit:
+                    #add ao backtrack
+                lnewnodes.append(newnode)
                     
             self.add_to_open(lnewnodes)
-            
         return None
     @property
     def avg_branching(self):
@@ -134,8 +153,10 @@ class SearchTree:
     # juntar novos nos a lista de nos abertos de acordo com a estrategia
     def add_to_open(self,lnewnodes):
         if self.strategy == 'breadth':
+            #adiciona ao fim
             self.open_nodes.extend(lnewnodes)
         elif self.strategy == 'depth':
+            #mete no inicio
             self.open_nodes[:0] = lnewnodes
         elif self.strategy == 'uniform':
             self.open_nodes.extend(lnewnodes)
