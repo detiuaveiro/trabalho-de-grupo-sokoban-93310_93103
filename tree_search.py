@@ -107,9 +107,9 @@ class SearchTree:
         print("NODE: ",node)
         px=xf-x
         py=yf-y
-        path=breadth_first_search(node.parent.state.keeper,(xf,yf),node.state)
-        
+        path=breadth_first_search(node.parent.state.keeper,(x-px,y-py),node.parent.state)
         path+=l
+        print("path do caralho")
         return self.get_path(node.parent)+path
 
 
@@ -127,7 +127,7 @@ class SearchTree:
         backtrack=set()
         while self.open_nodes != []:
             node = self.open_nodes.pop(0)
-            backtrack.add(hash(frozenset(node.state.boxes)))
+            print(node.state)
             if self.problem.goal_test(node.state):
                 self.solution = node
                 self.terminals = len(self.open_nodes)+1
@@ -142,10 +142,11 @@ class SearchTree:
                 #backtrack 
                 #if limit is None or newnode.depth <=limit:
                     #add ao backtrack
-                print(newstate.boxes)
-                if hash(frozenset(newnode.state.boxes)) not in backtrack:
+                if (hash(frozenset(newnode.state.boxes)),newstate.keeper) not in backtrack:
+                    print(newstate.boxes)
                     lnewnodes.append(newnode)
-                    
+                    backtrack.add((hash(frozenset(newnode.state.boxes)),newstate.keeper))
+      
             self.add_to_open(lnewnodes)
         return None
     @property

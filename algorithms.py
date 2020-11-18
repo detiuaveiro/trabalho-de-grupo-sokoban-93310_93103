@@ -8,13 +8,13 @@ def breadth_first_search(start, end, map):
 	
 	while queue:
 		x, y, path = queue.pop(0)
-
 		if vis[y][x] or map.get_tile((x,y)) & 0b1100:
 			# already visited or blocked
 			continue 
 		vis[y][x] = 1
 
 		if (x, y) == end:
+			print(path)
 			return path
 
 		if 0 <= y - 1 < ver_tiles:

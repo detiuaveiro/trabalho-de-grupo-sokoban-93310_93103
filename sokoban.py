@@ -28,11 +28,10 @@ class Sokoban(SearchDomain):
 			for dx,dy,l in [(-1,0,"a"),(1,0,"d"),(0,1,"s"),(0,-1,"w")]:
 				px=x+dx
 				py=y+dy
-				if mapa.get_tile((px,py))!=8 and breadth_first_search(mapa.keeper,(x-dx,y-dy),mapa):
+				if not (mapa.get_tile((px,py)) & 0b1100) and breadth_first_search(mapa.keeper,(x-dx,y-dy),mapa) is not None:
 					actions.append((x,y,px,py,l))
 		return actions    
 
-	#move a caixa no mapa e retorna (hash(mapa.keeper),hash(frozenset(mapas.boxes))     
 	def result(self,mapa,action):
 		x, y, dx, dy, _ = action
 		cpos_box = x, y 
@@ -41,8 +40,9 @@ class Sokoban(SearchDomain):
 		mapa.clear_tile(cpos_box)
 		mapa.set_tile(cpos_box, Tiles.MAN)
 		mapa.set_tile(npos_box, Tiles.BOX)
+		print("Posicao caixa:",dx,dy)
 		return mapa
- 
+
 	
 	# numero de passos entre nodes
 	def cost(self, mapa, action):

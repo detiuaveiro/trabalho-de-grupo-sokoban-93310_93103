@@ -34,7 +34,7 @@ async def agent_loop(server_address="localhost:8000", agent_name="student"):
 
 					for key in t.search():
 						print("key : ",key)
-						time.sleep(1)
+						time.sleep(0.11)
 						await websocket.send(
 							json.dumps({"cmd": "key", "key": key})
 						)  # send key command to server - you must implement this send in the AI agent
