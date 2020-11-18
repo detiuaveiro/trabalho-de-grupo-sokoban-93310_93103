@@ -104,11 +104,11 @@ class SearchTree:
         if node.parent == None:
             return ""
         x,y,xf,yf,l=node.laction
-        print(node)
+        print("NODE: ",node)
         px=xf-x
         py=yf-y
-        path=depth_first_search(node.parent.state.keeper,(x-px,y-py),node.state)
-        print("path ",path)
+        path=breadth_first_search(node.parent.state.keeper,(xf,yf),node.state)
+        
         path+=l
         return self.get_path(node.parent)+path
 
@@ -124,25 +124,27 @@ class SearchTree:
 
     # procurar a solucao
     def search(self,limit=None):
+        backtrack=set()
         while self.open_nodes != []:
             node = self.open_nodes.pop(0)
-            print(node.state)
+            backtrack.add(hash(frozenset(node.state.boxes)))
             if self.problem.goal_test(node.state):
-                print("puaifjasfvauydvad\n\n\n\n\n\n")
                 self.solution = node
                 self.terminals = len(self.open_nodes)+1
+                print("\n\n\n\n\n\n\n\nCHEGOU AQUI\n\n\n\n\n\n\n\n",self.get_path(node))
                 return self.get_path(node)
             self.non_terminals += 1
             lnewnodes = []
             for a in self.problem.domain.actions(node):
-                #deepcopy
                 print(a)
                 newstate = self.problem.domain.result(deepcopy(node.state),a)
                 newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a)
                 #backtrack 
                 #if limit is None or newnode.depth <=limit:
                     #add ao backtrack
-                lnewnodes.append(newnode)
+                print(newstate.boxes)
+                if hash(frozenset(newnode.state.boxes)) not in backtrack:
+                    lnewnodes.append(newnode)
                     
             self.add_to_open(lnewnodes)
         return None

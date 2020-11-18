@@ -1,39 +1,43 @@
+import math
 
+def breadth_first_search(start, end, map):
+	hor_tiles, ver_tiles = map.size
+	vis = [[0] * hor_tiles for _ in range(ver_tiles)]
+	queue = []
+	queue.append((start[0], start[1], ""))
+	
+	while queue:
+		x, y, path = queue.pop(0)
 
-def breadth_first_search(start,end,mapa):
+		if vis[y][x] or map.get_tile((x,y)) & 0b1100:
+			# already visited or blocked
+			continue 
+		vis[y][x] = 1
 
-    queue = [start]
-    hor,ver = mapa.size
-    backtrack = []
-    while len(queue)!=0:
-        x,y = queue.pop(0)
-        backtrack.append((x,y))
-        if (x,y)==end:
-            return True
+		if (x, y) == end:
+			return path
 
-        if 0<=x-1<hor and not mapa.get_tile((x-1,y)) == 8:
-            if (x-1,y) not in backtrack:
-                queue.append((x-1,y))
-        if 0<=x+1<hor and not mapa.get_tile((x+1,y)) == 8: 
-            if (x+1,y) not in backtrack:            
-                queue.append((x+1,y))
-        if 0<=y-1<ver and not mapa.get_tile((x,y-1)) == 8: 
-            if (x,y-1) not in backtrack:
-                queue.append((x,y-1))
-        if 0<=y+1<ver and not mapa.get_tile((x,y+1)) == 8: 
-            if (x,y+1) not in backtrack:
-                queue.append((x,y+1))
-    return False
+		if 0 <= y - 1 < ver_tiles:
+			queue.append((x, y - 1, path + "w"))
+		if 0 <= x - 1 < hor_tiles:
+			queue.append((x - 1, y, path + "a"))
+		if 0 <= y + 1 < ver_tiles:
+			queue.append((x, y + 1, path + "s"))
+		if 0 <= x + 1 < hor_tiles:
+			queue.append((x + 1, y, path + "d"))
+	return None
+
 
 def depth_first_search(start, end, map):
 	def recursive(cur, path):
 		x, y = cur
+		print("x:",x," y:",y)
 		if vis[y][x] or map.get_tile(cur) & 0b1100:
+			print("none1")
 			return None 
 		vis[y][x] = 1
 
 		if cur == end:
-			print("puta q pareu \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
 			return path   
 
 		if 0 <= y - 1 < ver_tiles:
@@ -51,10 +55,14 @@ def depth_first_search(start, end, map):
 		if 0 <= x + 1 < hor_tiles:
 			goal_path = recursive((x + 1, y), path + "d")
 			if goal_path is not None:
-				return goal_path	
+				return goal_path
+		print("none2")	
 		return None
 
 	hor_tiles, ver_tiles = map.size
 	vis = [[0] * hor_tiles for _ in range(ver_tiles)]
 
 	return recursive(start, "")
+
+def manhattan_distance(p1,p2):
+	return abs(p1[0]-p2[0])+abs(p1[1]-p2[1])
