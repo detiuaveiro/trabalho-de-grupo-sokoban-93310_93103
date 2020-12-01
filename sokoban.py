@@ -53,7 +53,7 @@ class Sokoban(SearchDomain):
 		for box in mapa.boxes:
 			for storage in mapa.empty_goals:
 				total+=manhattan_distance(box,storage)
-		return -total
+		return total
 
 	def satisfies(self, mapa):
 		return mapa.completed

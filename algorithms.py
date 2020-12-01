@@ -1,8 +1,8 @@
 import math
 
 def breadth_first_search(start, end, map):
-	hor_tiles, ver_tiles = map.size
-	vis = [[0] * hor_tiles for _ in range(ver_tiles)]
+	n_hor, n_vert = map.size
+	vis = [[0] * n_hor for _ in range(n_vert)]
 	queue = []
 	queue.append((start[0], start[1], ""))
 	
@@ -17,14 +17,14 @@ def breadth_first_search(start, end, map):
 			print(path)
 			return path
 
-		if 0 <= y - 1 < ver_tiles:
-			queue.append((x, y - 1, path + "w"))
-		if 0 <= x - 1 < hor_tiles:
-			queue.append((x - 1, y, path + "a"))
-		if 0 <= y + 1 < ver_tiles:
+		if 0 <= y + 1 < n_vert:
 			queue.append((x, y + 1, path + "s"))
-		if 0 <= x + 1 < hor_tiles:
+		if 0 <= x + 1 < n_hor:
 			queue.append((x + 1, y, path + "d"))
+		if 0 <= y - 1 < n_vert:
+			queue.append((x, y - 1, path + "w"))
+		if 0 <= x - 1 < n_hor:
+			queue.append((x - 1, y, path + "a"))
 	return None
 
 
