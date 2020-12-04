@@ -40,7 +40,6 @@ class Sokoban(SearchDomain):
 		mapa.clear_tile(cpos_box)
 		mapa.set_tile(cpos_box, Tiles.MAN)
 		mapa.set_tile(npos_box, Tiles.BOX)
-		print("Posicao caixa:",dx,dy)
 		return mapa
 
 	
