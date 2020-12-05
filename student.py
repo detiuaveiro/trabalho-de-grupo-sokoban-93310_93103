@@ -20,7 +20,7 @@ async def solver(puzzle, solution):
 		mapa = Map(game_properties["map"])
 		p = SearchProblem(domain,mapa)
 
-		t = SearchTree(p, 'a*')
+		t = SearchTree(p, 'greedy')
 
 		while True:
 			await asyncio.sleep(0)  # this should be 0 in your code and this is REQUIRED
@@ -50,7 +50,6 @@ async def agent_loop(puzzle, solution, server_address="localhost:8000", agent_na
 
 				if not solution.empty():
 					keys = await solution.get()
-					print("keys=",keys)
 
 				key = ""
 				if len(keys):  # we got a solution!

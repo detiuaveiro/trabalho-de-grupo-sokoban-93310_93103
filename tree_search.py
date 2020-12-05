@@ -14,7 +14,7 @@
 from copy import deepcopy
 from abc import ABC, abstractmethod
 from algorithms import *
-from mapa import Tiles
+from mapa import Tiles, Map
 import asyncio
 # Dominios de pesquisa
 # Permitem calcular
@@ -125,29 +125,20 @@ class SearchTree:
 	def checkdeadlocks(self,map_init):
 		deadlocks = set()
 		n_hor, n_vert = map_init.size
-		
 		queue = []
-		goals=[(x,y) for x in range(1,n_hor-1) for y in range(1,n_vert-1) if map_init.get_tile((x,y))==Tiles.BOX_ON_GOAL or map_init.get_tile((x,y))==Tiles.GOAL]
-
-		deadlocks=[(x,y) for x in range(1,n_hor-1) for y in range(1,n_vert-1) if map_init.get_tile((x,y))!=Tiles.WALL]
-
-
+		goals=map_init.filter_tiles([Tiles.GOAL, Tiles.MAN_ON_GOAL, Tiles.BOX_ON_GOAL])
+		deadlocks=[(x,y) for x in range(1,n_hor) for y in range(1,n_vert) if map_init.get_tile((x,y))!=Tiles.WALL]
 		for (x,y) in goals:
 			vis = [[0] * n_vert for _ in range(n_hor)]
 			queue.append((x, y, x, y))
-			
 			while queue:
 				x, y, xp, yp = queue.pop(0)
-				print("\n\n\naqui",x,y,xp,yp)
-				print("dead locks",deadlocks)
 				if vis[x][y] or map_init.get_tile((xp,yp)) == Tiles.WALL or map_init.get_tile((x,y)) == Tiles.WALL:
 					# unreachable
 					continue
-				
 				vis[x][y] = 1
 				if (x,y) in deadlocks:
 					deadlocks.remove((x,y))
-
 				if 0 <= y + 2 < n_vert:
 					queue.append((x, y + 1, x,y+2))
 				if 0 <= x + 2 < n_hor:
@@ -158,11 +149,75 @@ class SearchTree:
 					queue.append((x - 1, y, x-2,y))
 		return deadlocks
 
+
+	def freeze(self,newstate,deadlocks,boxeschecked,box):
+		x,y=box
+		owntile=newstate.get_tile((x,y))
+		toptile=newstate.get_tile((x,y-1))
+		bottomtile=newstate.get_tile((x,y+1))
+		lefttile=newstate.get_tile((x-1,y))
+		righttile=newstate.get_tile((x+1,y))
+		vert = True
+		hor  = True
+		
+		# Check vertical walls
+
+		if owntile==Tiles.BOX_ON_GOAL and not boxeschecked:
+			return True
+		boxeschecked.append((x,y))
+
+		if (toptile == Tiles.WALL or bottomtile==Tiles.WALL):
+			vert = False
+
+		# Check vertical deadlocks
+		elif toptile in deadlocks and bottomtile in deadlocks:
+			vert = False
+
+		# Check horizontal walls
+		if  (lefttile == Tiles.WALL or righttile==Tiles.WALL):
+			hor = False
+
+		# Check horizontal deadlocks
+		elif  righttile in deadlocks and lefttile in deadlocks:
+			hor = False
+			
+		if not hor and not vert:
+			return False
+		
+		if toptile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and vert:
+			if (x,y-1) not in boxeschecked:
+				vert = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y-1))
+			else:
+				vert = False
+
+		if bottomtile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and vert:
+			if (x,y+1) not in boxeschecked:
+				vert = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y+1))
+			else:
+				vert=False
+
+		if (lefttile in [Tiles.BOX ,Tiles.BOX_ON_GOAL]) and hor:
+			if(x-1,y) not in boxeschecked:
+				hor = self.freeze(newstate,deadlocks,list(boxeschecked),(x-1,y))
+			else:
+				hor = False
+
+		if (righttile in [Tiles.BOX,Tiles.BOX_ON_GOAL]) and hor:
+			if(x+1,y) not in boxeschecked:
+				hor = self.freeze(newstate,deadlocks,list(boxeschecked),(x+1,y))
+			else:
+				hor = False
+
+		if hor or vert:
+			return True
+		
+		return False
+	
+
 	# procurar a solucao 
 	async def search(self,limit=None):
 		backtrack=set()
 		deadlocks = self.checkdeadlocks(self.problem.initial)
-		print("deadlocks sao:",deadlocks)
 		self.problem.initial._map
 		while self.open_nodes != []:
 			await asyncio.sleep(0)
@@ -170,20 +225,20 @@ class SearchTree:
 			if self.problem.goal_test(node.state):
 				self.solution = node
 				self.terminals = len(self.open_nodes)+1
-				print("\n\n\n\n\n\n\n\nCHEGOU AQUI\n\n\n\n\n\n\n\n",self.get_path(node))
 				return self.get_path(node)
 			self.non_terminals += 1
 			lnewnodes = []
-			print(self.problem.domain.actions(node))
+			#print(self.problem.domain.actions(node))
 			for a in self.problem.domain.actions(node):
 				newstate = self.problem.domain.result(deepcopy(node.state),a)
 				newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a)
-				if deadlocks!=None and (a[2],a[3]) not in deadlocks:
-					if (hash(frozenset(newnode.state.boxes)),newstate.keeper) not in backtrack:
+				if (hash(frozenset(newnode.state.boxes)),newstate.keeper) not in backtrack and deadlocks!=None and (a[2],a[3]) not in deadlocks:
+					if self.freeze(newstate,deadlocks,[],(a[2],a[3])):
 						lnewnodes.append(newnode)
 						self.add_to_open(lnewnodes)
 				backtrack.add((hash(frozenset(newnode.state.boxes)),newstate.keeper))
 		return None
+		
 	@property
 	def avg_branching(self):
 		return round((self.terminals - 1 + self.non_terminals) / self.non_terminals,2)  
@@ -205,14 +260,3 @@ class SearchTree:
 		elif self.strategy == "a*":
 			self.open_nodes.extend(lnewnodes)
 			self.open_nodes.sort(key=lambda node:node.heuristic+node.cost)
-		
-		
-		'''deadlocks = set()
-		xMax, yMax = map_init.size
-
-		for x in range(1,xMax-1):
-			for y in range(1, yMax-1):
-				if (map_init.get_tile((x,y))!=Tiles.GOAL and map_init.get_tile((x,y))!=Tiles.WALL and map_init.get_tile((x,y))!=Tiles.BOX_ON_GOAL) and (map_init.get_tile((x,y-1))==Tiles.WALL or map_init.get_tile((x,y+1))==Tiles.WALL) and (map_init.get_tile((x-1,y))==Tiles.WALL or map_init.get_tile((x+1,y))==Tiles.WALL):
-					deadlocks.add((x,y))
-		return deadlocks
-'''

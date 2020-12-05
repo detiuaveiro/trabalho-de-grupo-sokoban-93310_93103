@@ -49,9 +49,17 @@ class Sokoban(SearchDomain):
 	# distancias  
 	def heuristic(self, mapa):
 		total=0
-		for box in mapa.boxes:
-			for storage in mapa.empty_goals:
-				total+=manhattan_distance(box,storage)
+		finished_boxes=set()
+		for storage in mapa.empty_goals:
+			mini=1000
+			end_box=None
+			for box in mapa.boxes:
+				dist=manhattan_distance(box,storage)
+				if dist < mini and box not in finished_boxes:
+					mini=dist
+					end_box=box	
+			finished_boxes.add(end_box)
+			total+=mini
 		return total
 
 	def satisfies(self, mapa):
