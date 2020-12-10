@@ -99,8 +99,7 @@ class SearchTree:
 		self.terminals = 1
 		self.non_terminals = 0
 		self.solution=None
-		self.deadlocks=self.checkdeadlocks(problem.initial)
-		#set do backtrack  (hash(boxes),hash(keeper))
+		self.deadlocks=self.checkdeadlocks(problem.initial) #verficar as posicoes dos imple deadlocks
 
 	# obter o caminho (sequencia de estados) da raiz ate um no
 	def get_path(self,node):
@@ -109,7 +108,7 @@ class SearchTree:
 		x,y,xf,yf,l=node.laction
 		px=xf-x
 		py=yf-y
-		path=breadth_first_search(node.parent.keeper,(x-px,y-py),node.parent.state)
+		path=breadth_first_search(node.parent.keeper,node.parent.state,(x-px,y-py))
 		path+=l
 		return self.get_path(node.parent)+path
 

@@ -29,7 +29,7 @@ class Sokoban(SearchDomain):
 				px=x+dx
 				py=y+dy
 				if (px,py) not in deadlocks:
-					if not (mapa.get_tile((px,py)) & 0b1100) and breadth_first_search(mapa.keeper,(x-dx,y-dy),mapa) is not None:
+					if not (mapa.get_tile((px,py)) & 0b1100) and breadth_first_search(mapa.keeper,mapa,(x-dx,y-dy)) is not None:
 						actions.append((x,y,px,py,l))
 		return actions
 
@@ -43,9 +43,12 @@ class Sokoban(SearchDomain):
 		mapa.set_tile(npos_box, Tiles.BOX)
 		if(hash(frozenset(mapa.boxes)),mapa.keeper) not in backtrack:
 			print(mapa)
-			if self.freeze(mapa,deadlocks,[],(action[2],action[3])):
-				print("Not frozen")
+			filtered_map=mapa.filter_tiles()
+				
 				return mapa
+				
+				if self.corral(node) or True:
+					pass
 		return None
 
 
@@ -126,7 +129,9 @@ class Sokoban(SearchDomain):
 
 		return False
 
-	
+	def corral(self,node):
+		return True
+
 	# numero de passos entre nodes
 	def cost(self, mapa, action):
 		return 1
