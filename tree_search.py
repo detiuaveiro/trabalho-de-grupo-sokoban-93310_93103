@@ -64,15 +64,15 @@ class SearchProblem:
 
 # Nos de uma arvore de pesquisa
 class SearchNode:
-	def __init__(self,state,parent,depth,cost,heuristic,laction): 
+	def __init__(self,state,parent,depth,cost,heuristic,laction,boxes,keeper): 
 		self.state = state      #mapa deepcopy(mapa)
 		self.parent = parent    #node
 		self.depth = depth
 		self.cost = cost
 		self.heuristic = heuristic
 		self.laction = laction
-
-		#node(asdiadjas,parent.depth+1,parent.cost+problem.domain.cost(mapa),p.doman.heuris(mapa))
+		self.boxes=boxes		#caixas para nao ter de fazer for loops desnecessarios
+		self.keeper=keeper		#keeper para nao ter de procurar sempre que o keeper for necessario
 	
 	#pode ser melhorado a guardar todas as posicoes anteriores
 	def in_parent(self,newstate):
@@ -93,12 +93,13 @@ class SearchTree:
 	# construtor
 	def __init__(self,problem, strategy='breadth'): 
 		self.problem = problem          #search problem
-		root = SearchNode(problem.initial, None,0,0,problem.domain.heuristic(problem.initial),None)
+		root = SearchNode(problem.initial, None,0,0,problem.domain.heuristic(problem.initial),None,problem.initial.boxes,problem.initial.keeper)
 		self.open_nodes = [root]
 		self.strategy = strategy
 		self.terminals = 1
 		self.non_terminals = 0
 		self.solution=None
+		self.deadlocks=self.checkdeadlocks(problem.initial)
 		#set do backtrack  (hash(boxes),hash(keeper))
 
 	# obter o caminho (sequencia de estados) da raiz ate um no
@@ -108,11 +109,9 @@ class SearchTree:
 		x,y,xf,yf,l=node.laction
 		px=xf-x
 		py=yf-y
-		path=breadth_first_search(node.parent.state.keeper,(x-px,y-py),node.parent.state)
+		path=breadth_first_search(node.parent.keeper,(x-px,y-py),node.parent.state)
 		path+=l
 		return self.get_path(node.parent)+path
-
-
 
 	@property
 	def length(self):
@@ -148,95 +147,33 @@ class SearchTree:
 				if 0 <= x - 2 < n_hor:
 					queue.append((x - 1, y, x-2,y))
 		return deadlocks
-
-
-	def freeze(self,newstate,deadlocks,boxeschecked,box):
-		x,y=box
-		owntile=newstate.get_tile((x,y))
-		toptile=newstate.get_tile((x,y-1))
-		bottomtile=newstate.get_tile((x,y+1))
-		lefttile=newstate.get_tile((x-1,y))
-		righttile=newstate.get_tile((x+1,y))
-		vert = True
-		hor  = True
-		
-		# Check vertical walls
-
-		if owntile==Tiles.BOX_ON_GOAL and not boxeschecked:
-			return True
-		boxeschecked.append((x,y))
-
-		if (toptile == Tiles.WALL or bottomtile==Tiles.WALL):
-			vert = False
-
-		# Check vertical deadlocks
-		elif toptile in deadlocks and bottomtile in deadlocks:
-			vert = False
-
-		# Check horizontal walls
-		if  (lefttile == Tiles.WALL or righttile==Tiles.WALL):
-			hor = False
-
-		# Check horizontal deadlocks
-		elif  righttile in deadlocks and lefttile in deadlocks:
-			hor = False
-			
-		if not hor and not vert:
-			return False
-		
-		if toptile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and vert:
-			if (x,y-1) not in boxeschecked:
-				vert = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y-1))
-			else:
-				vert = False
-
-		if bottomtile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and vert:
-			if (x,y+1) not in boxeschecked:
-				vert = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y+1))
-			else:
-				vert=False
-
-		if (lefttile in [Tiles.BOX ,Tiles.BOX_ON_GOAL]) and hor:
-			if(x-1,y) not in boxeschecked:
-				hor = self.freeze(newstate,deadlocks,list(boxeschecked),(x-1,y))
-			else:
-				hor = False
-
-		if (righttile in [Tiles.BOX,Tiles.BOX_ON_GOAL]) and hor:
-			if(x+1,y) not in boxeschecked:
-				hor = self.freeze(newstate,deadlocks,list(boxeschecked),(x+1,y))
-			else:
-				hor = False
-
-		if hor or vert:
-			return True
-		
-		return False
 	
 
 	# procurar a solucao 
 	async def search(self,limit=None):
 		backtrack=set()
-		deadlocks = self.checkdeadlocks(self.problem.initial)
 		self.problem.initial._map
+		iterations=0
 		while self.open_nodes != []:
 			await asyncio.sleep(0)
+			iterations+=1
 			node = self.open_nodes.pop(0)
 			if self.problem.goal_test(node.state):
 				self.solution = node
+				print("num of iter:",iterations)
 				self.terminals = len(self.open_nodes)+1
 				return self.get_path(node)
 			self.non_terminals += 1
 			lnewnodes = []
 			#print(self.problem.domain.actions(node))
-			for a in self.problem.domain.actions(node):
-				newstate = self.problem.domain.result(deepcopy(node.state),a)
-				newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a)
-				if (hash(frozenset(newnode.state.boxes)),newstate.keeper) not in backtrack and deadlocks!=None and (a[2],a[3]) not in deadlocks:
-					if self.freeze(newstate,deadlocks,[],(a[2],a[3])):
-						lnewnodes.append(newnode)
-						self.add_to_open(lnewnodes)
-				backtrack.add((hash(frozenset(newnode.state.boxes)),newstate.keeper))
+			for a in self.problem.domain.actions(node,self.deadlocks):
+				newstate = self.problem.domain.result(deepcopy(node.state),a,backtrack,self.deadlocks)
+				if newstate != None:
+					newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a,newstate.boxes,newstate.keeper)
+					lnewnodes.append(newnode)
+					self.add_to_open(lnewnodes)
+					backtrack.add((hash(frozenset(newnode.boxes)),newnode.keeper))
+		print(lnewnodes)
 		return None
 		
 	@property
