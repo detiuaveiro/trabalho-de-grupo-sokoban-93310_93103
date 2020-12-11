@@ -1,6 +1,6 @@
 import math
 
-def breadth_first_search(start, map, end=None):
+def breadth_first_search(start, map, end):
 	n_hor, n_vert = map.size
 	vis = [[0] * n_hor for _ in range(n_vert)]
 	queue = []
@@ -14,7 +14,6 @@ def breadth_first_search(start, map, end=None):
 		vis[y][x] = 1
 
 		if (x, y) == end:
-			print(vis,"\n")
 			return path
 
 		if 0 <= y + 1 < n_vert:

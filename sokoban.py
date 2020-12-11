@@ -42,13 +42,34 @@ class Sokoban(SearchDomain):
 		mapa.set_tile(cpos_box, Tiles.MAN)
 		mapa.set_tile(npos_box, Tiles.BOX)
 		if(hash(frozenset(mapa.boxes)),mapa.keeper) not in backtrack:
+			print("mapa")
 			print(mapa)
-			filtered_map=mapa.filter_tiles()
+			lx,ly=mapa.size
+			corral_tiles=set()
+			filtered_map=mapa.filter_tiles((Tiles.FLOOR,Tiles.GOAL))
+			for tile in filtered_map:
+				if breadth_first_search(mapa.keeper,mapa,tile)==None:#nao consegue chegar à tile
+					corral_tiles.add(tile)
+					x,y=tile
+					for dx,dy in [(0,1),(0,-1),(-1,0),(1,0)]:
+						fx=x+dx
+						fy=y+dy
+						if 0 > fx > lx and 0 > fy > ly:
+							if mapa.get_tile((x+dx,y+dy)) in [Tiles.BOX,Tiles.BOX_ON_GOAL]:
+								corral_tiles.add(x+dy,y+dy)
+			print("tiles,no boxes",corral_tiles)
+			for box in mapa.boxes:
+				print(box)
+				if box not in corral_tiles:
+					bx,by=box
+					if ((bx,by-1) in corral_tiles or (bx,by+1) in corral_tiles) and ((bx-1,by) in corral_tiles or (bx+1,by) in corral_tiles):
+						print("chegou aqui?")
+						corral_tiles.add(box)
+			print("tiles",corral_tiles)
+			return mapa
 				
-				return mapa
-				
-				if self.corral(node) or True:
-					pass
+			#if self.corral(node) or True:
+			#	pass
 		return None
 
 
@@ -65,9 +86,8 @@ class Sokoban(SearchDomain):
 		boxeschecked.append((x,y))
 		#check if box  moved is on goal
 		if owntile==Tiles.BOX_ON_GOAL:
-    		#check if box moved to goal can be moved
+			#check if box moved to goal can be moved
 			if (toptile in [Tiles.BOX,Tiles.BOX_ON_GOAL,Tiles.WALL] or bottomtile in [Tiles.BOX,Tiles.BOX_ON_GOAL,Tiles.WALL]) and (lefttile in [Tiles.BOX,Tiles.BOX_ON_GOAL,Tiles.WALL] or righttile in [Tiles.BOX,Tiles.BOX_ON_GOAL,Tiles.WALL]):
-				print("ongoal")
 				on_goal=True
 				if toptile==Tiles.BOX and toptile not in boxeschecked:
 					on_goal=self.freeze(newstate,deadlocks,list(boxeschecked),(x,y-1))
@@ -77,7 +97,6 @@ class Sokoban(SearchDomain):
 					on_goal=self.freeze(newstate,deadlocks,list(boxeschecked),(x-1,y))
 				if on_goal and righttile==Tiles.BOX and righttile not in boxeschecked:
 					on_goal=self.freeze(newstate,deadlocks,list(boxeschecked),(x+1,y))
-				print(on_goal)
 				return on_goal
 
 		# Check vertical walls
@@ -129,8 +148,9 @@ class Sokoban(SearchDomain):
 
 		return False
 
-	def corral(self,node):
-		return True
+	# def corral(self,node):
+	# 		for node.state
+	# 	return True
 
 	# numero de passos entre nodes
 	def cost(self, mapa, action):
