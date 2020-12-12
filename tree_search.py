@@ -100,6 +100,7 @@ class SearchTree:
 		self.non_terminals = 0
 		self.solution=None
 		self.deadlocks=self.checkdeadlocks(problem.initial)
+		self.freezes=set()
 		#set do backtrack  (hash(boxes),hash(keeper))
 
 	# obter o caminho (sequencia de estados) da raiz ate um no
@@ -153,27 +154,28 @@ class SearchTree:
 	async def search(self,limit=None):
 		backtrack=set()
 		self.problem.initial._map
-		iterations=0
 		while self.open_nodes != []:
 			await asyncio.sleep(0)
-			iterations+=1
 			node = self.open_nodes.pop(0)
+			#print(self.freezes)
 			if self.problem.goal_test(node.state):
 				self.solution = node
-				print("num of iter:",iterations)
+				print("num of iter:",self.non_terminals)
+				print("depth:",node.depth)
 				self.terminals = len(self.open_nodes)+1
+				print("terminals:",self.terminals)
 				return self.get_path(node)
 			self.non_terminals += 1
 			lnewnodes = []
-			#print(self.problem.domain.actions(node))
-			for a in self.problem.domain.actions(node,self.deadlocks):
-				newstate = self.problem.domain.result(deepcopy(node.state),a,backtrack,self.deadlocks)
+			for a in self.problem.domain.actions(node,self.deadlocks,self.freezes):
+				newstate = self.problem.domain.result(deepcopy(node.state),a,backtrack,self.deadlocks,node,self.freezes)
 				if newstate != None:
+					print(newstate)
 					newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a,newstate.boxes,newstate.keeper)
 					lnewnodes.append(newnode)
 					self.add_to_open(lnewnodes)
 					backtrack.add((hash(frozenset(newnode.boxes)),newnode.keeper))
-		print(lnewnodes)
+		#print(lnewnodes)
 		return None
 		
 	@property

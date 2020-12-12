@@ -1,5 +1,3 @@
-import math
-
 def breadth_first_search(start, end, map):
 	n_hor, n_vert = map.size
 	vis = [[0] * n_hor for _ in range(n_vert)]
@@ -14,7 +12,6 @@ def breadth_first_search(start, end, map):
 		vis[y][x] = 1
 
 		if (x, y) == end:
-			print(path)
 			return path
 
 		if 0 <= y + 1 < n_vert:
@@ -31,9 +28,9 @@ def breadth_first_search(start, end, map):
 def depth_first_search(start, end, map):
 	def recursive(cur, path):
 		x, y = cur
-		print("x:",x," y:",y)
+		#print("x:",x," y:",y)
 		if vis[y][x] or map.get_tile(cur) & 0b1100:
-			print("none1")
+			#print("none1")
 			return None 
 		vis[y][x] = 1
 
@@ -56,7 +53,7 @@ def depth_first_search(start, end, map):
 			goal_path = recursive((x + 1, y), path + "d")
 			if goal_path is not None:
 				return goal_path
-		print("none2")	
+		#print("none2")	
 		return None
 
 	hor_tiles, ver_tiles = map.size

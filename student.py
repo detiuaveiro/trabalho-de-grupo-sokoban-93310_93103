@@ -19,9 +19,7 @@ async def solver(puzzle, solution):
 		game_properties = await puzzle.get()
 		mapa = Map(game_properties["map"])
 		p = SearchProblem(domain,mapa)
-
 		t = SearchTree(p, 'greedy')
-
 		while True:
 			await asyncio.sleep(0)  # this should be 0 in your code and this is REQUIRED
 			break
