@@ -157,7 +157,7 @@ class SearchTree:
 		while self.open_nodes != []:
 			await asyncio.sleep(0)
 			node = self.open_nodes.pop(0)
-			#print(self.freezes)
+			#print("allfreezes ",self.freezes)
 			if self.problem.goal_test(node.state):
 				self.solution = node
 				print("num of iter:",self.non_terminals)
@@ -175,7 +175,7 @@ class SearchTree:
 					lnewnodes.append(newnode)
 					self.add_to_open(lnewnodes)
 					backtrack.add((hash(frozenset(newnode.boxes)),newnode.keeper))
-		#print(lnewnodes)
+					#print("lnewnodes\n\n\n",lnewnodes)
 		return None
 		
 	@property

@@ -1,6 +1,5 @@
+			# Module: cidades
 #
-# Module: cidades
-# 
 # Implements a SearchDomain for find paths between cities
 # using the tree_search module
 #
@@ -26,25 +25,40 @@ class Sokoban(SearchDomain):
 			for dx,dy,l in [(-1,0,"a"),(1,0,"d"),(0,1,"s"),(0,-1,"w")]:
 				px=x+dx
 				py=y+dy
-				if (px,py) not in deadlocks and not self.checkfreezes((px,py),freez,mapa):
-					if not (mapa.get_tile((px,py)) & 0b1100) and breadth_first_search(node.keeper,(x-dx,y-dy),mapa) is not None:
+				if not (mapa.get_tile((px,py)) & 0b1100) and breadth_first_search(node.keeper,(x-dx,y-dy),mapa) is not None:
+					if (px,py) not in deadlocks and not self.checkfreezes((px,py),freez,mapa,(x,y)): 
+						#print("append ",px,py)
 						actions.append((x,y,px,py,l))
 		return actions
 
-
-	def checkfreezes(self,box_moved,freezes,mapa):
+	
+	def checkfreezes(self,box_moved,freezes,mapa,prev_pos):
+		
+		#print(freezes)
 		for freeze in freezes:
-			if len(freeze)!=0 and freeze[0]==box_moved:
-				cont = 0
-				for i in range(1,len(freeze)):
-					if mapa.get_tile(freeze[i]) not in [Tiles.BOX,Tiles.BOX_ON_GOAL]:
-						break
-					cont += 1
-				if cont == len(freeze):
-					print("freeze repetido: ",freeze)
-					return True
+			if prev_pos not in freeze:
+				#print("freeze")
+				if len(freeze)!=0 and freeze[0]==box_moved:
+					flag=False
+					#print(mapa.get_tile(freeze[0]))
+					#print(box_moved,"and",freeze)
+					for tile in freeze:
+						tipo=mapa.get_tile(tile)
+						if not flag:
+							#print("\na\n\n",mapa,box_moved)
+							flag=True
+						else:
+							if tipo not in [Tiles.BOX,Tiles.BOX_ON_GOAL]:
+								flag=False
+								#print(tile,"")
+								break
+					if flag:
+						#print("freeze repetido: ",freeze)
+						#print("\nb\n\n",mapa)
+						return True
+			
 		return False
-
+	
 	def result(self,mapa,action, backtrack, deadlocks,node,freezes):
 		x, y, dx, dy, _ = action
 		cpos_box = x, y 
@@ -53,16 +67,25 @@ class Sokoban(SearchDomain):
 		mapa.clear_tile(cpos_box)
 		mapa.set_tile(cpos_box, Tiles.MAN)
 		mapa.set_tile(npos_box, Tiles.BOX)
+
+
 		if(hash(frozenset(mapa.boxes)),mapa.keeper) not in backtrack:
-			flag, newfreezes, _ = self.freeze(mapa,deadlocks,[],(dx,dy),[])
+			flag, newfreezes = self.freeze(mapa,deadlocks,[],(dx,dy))
 			if flag:
 				return mapa
-			else:
+			flag=True
+			for box in newfreezes:
+				if mapa.get_tile(box) != Tiles.BOX_ON_GOAL:
+					#print("not on goal ",newfreezes)
+					flag=False
+			if flag:
+				return mapa
+			if len(newfreezes)>1:
 				freezes.add(newfreezes)
 		return None
 
-
-	def freeze(self,newstate,deadlocks,boxeschecked,box,checkedongoal):
+	
+	def freeze(self,newstate,deadlocks,boxeschecked,box):
 		x,y=box
 		owntile=newstate.get_tile((x,y))
 		toptile=newstate.get_tile((x,y-1))
@@ -73,33 +96,7 @@ class Sokoban(SearchDomain):
 		hor  = True
 		
 		boxeschecked.append((x,y))
-		#check if box  moved is on goal
-		#print(boxeschecked)
-		if owntile==Tiles.BOX_ON_GOAL:
-			#print(newstate)
-			#check if box moved to goal can be moved
-			checkedongoal.append((x,y))
-			#print("ongoal ",len(checkedongoal))
-			entered_somewhere = False
-			on_goal = True
-			if toptile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and (x,y-1) not in boxeschecked:
-				entered_somewhere = True
-				on_goal,boxeschecked,checkedongoal=self.freeze(newstate,deadlocks,list(boxeschecked),(x,y-1),list(checkedongoal))
-			if on_goal and bottomtile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and (x,y+1) not in boxeschecked:
-				entered_somewhere=True
-				on_goal,boxeschecked,checkedongoal=self.freeze(newstate,deadlocks,list(boxeschecked),(x,y+1),list(checkedongoal))
-			if on_goal and lefttile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and (x-1,y) not in boxeschecked:
-				entered_somewhere = True
-				on_goal,boxeschecked,checkedongoal=self.freeze(newstate,deadlocks,list(boxeschecked),(x-1,y),list(checkedongoal))
-			if on_goal and righttile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and (x+1,y) not in boxeschecked:
-				entered_somewhere=True
-				on_goal,boxeschecked,checkedongoal=self.freeze(newstate,deadlocks,list(boxeschecked),(x+1,y),list(checkedongoal))
-			
-			if len(boxeschecked)==len(checkedongoal) and not entered_somewhere:
-				return (True, tuple(boxeschecked),checkedongoal)
-			if len(boxeschecked)==len(checkedongoal) and entered_somewhere:
-				return (on_goal, tuple(boxeschecked),checkedongoal)
-    							
+
 		# Check vertical walls
 		if (toptile == Tiles.WALL or bottomtile==Tiles.WALL):
 			vert = False
@@ -118,39 +115,40 @@ class Sokoban(SearchDomain):
 
 		if not hor and not vert:
 			#print(newstate)
-			return (False, tuple(boxeschecked),checkedongoal)
+			return (False, tuple(boxeschecked))
 
 		if toptile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and vert:
 			if (x,y-1) not in boxeschecked:
-				vert, boxeschecked, checkedongoal = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y-1),[])
+				vert, boxeschecked = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y-1))
 			else:
 				vert = False
 
 		if bottomtile in [Tiles.BOX,Tiles.BOX_ON_GOAL] and vert:
 			if (x,y+1) not in boxeschecked:
-				vert, boxeschecked, checkedongoal = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y+1),[])
+				vert, boxeschecked = self.freeze(newstate,deadlocks,list(boxeschecked),(x,y+1))
 			else:
 				vert=False
 
 		if (lefttile in [Tiles.BOX ,Tiles.BOX_ON_GOAL]) and hor:
 			if(x-1,y) not in boxeschecked:
-				hor, boxeschecked, checkedongoal = self.freeze(newstate,deadlocks,list(boxeschecked),(x-1,y),[])
+				hor, boxeschecked = self.freeze(newstate,deadlocks,list(boxeschecked),(x-1,y))
 			else:
 				hor = False
 
 		if (righttile in [Tiles.BOX,Tiles.BOX_ON_GOAL]) and hor:
 			if(x+1,y) not in boxeschecked:
-				hor, boxeschecked, checkedongoal = self.freeze(newstate,deadlocks,list(boxeschecked),(x+1,y),[])
+				hor, boxeschecked = self.freeze(newstate,deadlocks,list(boxeschecked),(x+1,y))
 			else:
 				hor = False
 
 		#print(newstate)
 		if hor or vert:
-			return (True, tuple(boxeschecked),checkedongoal)
-		return (False, tuple(boxeschecked),checkedongoal)
+			return (True, tuple(boxeschecked))
+		return (False, tuple(boxeschecked))
 	
 	# numero de passos entre nodes
 	def cost(self, mapa, action):
+    	
 		return 1
 	# distancias
 	def heuristic(self, mapa):
