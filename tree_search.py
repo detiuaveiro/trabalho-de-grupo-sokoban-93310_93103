@@ -11,6 +11,19 @@
 #  (c) Luis Seabra Lopes
 #  Introducao a Inteligencia Artificial, 2012-2019,
 #  Inteligência Artificial, 2014-2019
+
+# Authors:
+# Pedro Tavares 93103
+# Gonçalo Pereira 93310
+#
+# partilhamos ideias com:
+# Bruno Bastos 93302
+# Leandro Silva 93446
+#
+# Fontes consultadas:
+# http://sokobano.de/wiki/index.php?title=Solver
+# http://sokobano.de/wiki/index.php?title=How_to_detect_deadlocks
+
 from copy import deepcopy
 from abc import ABC, abstractmethod
 from algorithms import *
@@ -158,13 +171,6 @@ class SearchTree:
 			await asyncio.sleep(0)
 			node = self.open_nodes.pop(0)
 			#print("allfreezes ",self.freezes)
-			if self.problem.goal_test(node.state):
-				self.solution = node
-				print("num of iter:",self.non_terminals)
-				print("depth:",node.depth)
-				self.terminals = len(self.open_nodes)+1
-				print("terminals:",self.terminals)
-				return self.get_path(node)
 			self.non_terminals += 1
 			lnewnodes = []
 			for a in self.problem.domain.actions(node,self.deadlocks,self.freezes):
@@ -172,6 +178,13 @@ class SearchTree:
 				if newstate != None:
 					print(newstate)
 					newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a,newstate.boxes,newstate.keeper)
+					if self.problem.goal_test(newstate):
+						self.solution = node
+						print("num of iter:",self.non_terminals)
+						print("depth:",node.depth)
+						self.terminals = len(self.open_nodes)+1
+						print("terminals:",self.terminals)
+						return self.get_path(newnode)
 					lnewnodes.append(newnode)
 					backtrack.add((hash(frozenset(newnode.boxes)),newnode.keeper))
 					#print("lnewnodes\n\n\n",lnewnodes)

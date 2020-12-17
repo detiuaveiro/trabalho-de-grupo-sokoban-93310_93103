@@ -1,13 +1,14 @@
-			# Module: cidades
+#Authors:
+# Pedro Tavares 93103
+# Gonçalo Pereira 93310
 #
-# Implements a SearchDomain for find paths between cities
-# using the tree_search module
+# partilhamos ideias com:
+# Bruno Bastos 93302
+# Leandro Silva 93446
 #
-# (c) Luis Seabra Lopes
-# Introducao a Inteligencia Artificial, 2012-2020
-# Inteligência Artificial, 2014-2020
-#
-
+# Fontes consultadas:
+# http://sokobano.de/wiki/index.php?title=Solver
+# http://sokobano.de/wiki/index.php?title=How_to_detect_deadlocks
 import math
 from tree_search import *
 from mapa import Map
@@ -57,7 +58,7 @@ class Sokoban(SearchDomain):
 						return True
 			
 		return False
-	
+
 	def result(self,mapa,action, backtrack, deadlocks,node,freezes):
 		x, y, dx, dy, _ = action
 		cpos_box = x, y 

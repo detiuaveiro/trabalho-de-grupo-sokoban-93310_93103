@@ -1,3 +1,16 @@
+#Authors:
+# Pedro Tavares 93103
+# Gonçalo Pereira 93310
+#
+# partilhamos ideias com:
+# Bruno Bastos 93302
+# Leandro Silva 93446
+#
+# Fontes consultadas:
+# http://sokobano.de/wiki/index.php?title=Solver
+# http://sokobano.de/wiki/index.php?title=How_to_detect_deadlocks
+
+
 import asyncio
 import getpass
 import json
