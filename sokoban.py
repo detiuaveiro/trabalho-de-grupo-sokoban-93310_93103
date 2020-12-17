@@ -26,14 +26,13 @@ class Sokoban(SearchDomain):
 				px=x+dx
 				py=y+dy
 				if not (mapa.get_tile((px,py)) & 0b1100) and breadth_first_search(node.keeper,(x-dx,y-dy),mapa) is not None:
-					if (px,py) not in deadlocks:# and not self.checkfreezes((px,py),freez,mapa,(x,y)): 
+					if (px,py) not in deadlocks and not self.checkfreezes((px,py),freez,mapa,(x,y)):
 						#print("append ",px,py)
 						actions.append((x,y,px,py,l))
 		return actions
 
 
 	def checkfreezes(self,box_moved,freezes,mapa,prev_pos):
-		
 		#print(freezes)
 		for freeze in freezes:
 			if prev_pos not in freeze:
@@ -82,10 +81,9 @@ class Sokoban(SearchDomain):
 			if flag:
 				return mapa
 			if len(newfreezes)>1:
-				print("freeze repetido",newfreezes)
+				print("novo freeze ",newfreezes)
 				freezes.add(newfreezes)
-			
-			return mapa
+		
 		return None
 
 	
