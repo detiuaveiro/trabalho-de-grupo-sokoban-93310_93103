@@ -106,15 +106,14 @@ class SearchTree:
 	# construtor
 	def __init__(self,problem, strategy='breadth'): 
 		self.problem = problem          #search problem
-		root = SearchNode(problem.initial, None,0,0,problem.domain.heuristic(problem.initial),None,problem.initial.boxes,problem.initial.keeper)
-		self.open_nodes = [root]
-		self.strategy = strategy
-		self.terminals = 1
+		root = SearchNode(problem.initial, None,0,0,problem.domain.heuristic(problem.initial),None,problem.initial.boxes,problem.initial.keeper)#node inicial
+		self.open_nodes = [root]	#nodes a verificar
+		self.strategy = strategy    #estrategia de pesquisa
+		self.terminals = 1			
 		self.non_terminals = 0
 		self.solution=None
-		self.deadlocks=self.checkdeadlocks(problem.initial)
-		self.freezes=set()
-		#set do backtrack  (hash(boxes),hash(keeper))
+		self.deadlocks=self.checkdeadlocks(problem.initial)		#posicoes de deadlock
+		self.freezes=set()										#set de todos os freezes encontrados até ao momento
 
 	# obter o caminho (sequencia de estados) da raiz ate um no
 	def get_path(self,node):
@@ -123,35 +122,38 @@ class SearchTree:
 		x,y,xf,yf,l=node.laction
 		px=xf-x
 		py=yf-y
-		path=breadth_first_search(node.parent.keeper,(x-px,y-py),node.parent.state)
-		path+=l
-		return self.get_path(node.parent)+path
+		path=breadth_first_search(node.parent.keeper,(x-px,y-py),node.parent.state)#procura caminho da posicao apos a ação anterior até a açao seguinte
+		path+=l #ao caminho ate a açao adiciona a açao em si (mover a caixa)
+		return self.get_path(node.parent)+path #chama se a si proprio, mas para o node pai ate chegar a root
 
 	@property
 	def length(self):
-		return self.solution.depth
+		return self.solution.depth	#numero de antecedentes ate a root
 	
 	@property
 	def cost(self):
 		return self.solution.cost
 
+	#verifica quais as posiçoes que criam simple deadlocks
 	def checkdeadlocks(self,map_init):
 		deadlocks = set()
 		n_hor, n_vert = map_init.size
 		queue = []
-		goals=map_init.filter_tiles([Tiles.GOAL, Tiles.MAN_ON_GOAL, Tiles.BOX_ON_GOAL])
-		deadlocks=[(x,y) for x in range(1,n_hor) for y in range(1,n_vert) if map_init.get_tile((x,y))!=Tiles.WALL]
+		goals=map_init.filter_tiles([Tiles.GOAL, Tiles.MAN_ON_GOAL, Tiles.BOX_ON_GOAL]) #todos os tipos de goal
+		deadlocks=[(x,y) for x in range(1,n_hor) for y in range(1,n_vert) if map_init.get_tile((x,y))!=Tiles.WALL]#inicializar deadlocks como todas as tiles que nao sejam paredes
+		#verificar ate que tiles se poderiam levar caixas caso elas fossem puxadas a partir dos goals
 		for (x,y) in goals:
 			vis = [[0] * n_vert for _ in range(n_hor)]
 			queue.append((x, y, x, y))
 			while queue:
 				x, y, xp, yp = queue.pop(0)
 				if vis[x][y] or map_init.get_tile((xp,yp)) == Tiles.WALL or map_init.get_tile((x,y)) == Tiles.WALL:
-					# unreachable
+					# tile inalcançavel pela caixa
 					continue
 				vis[x][y] = 1
-				if (x,y) in deadlocks:
-					deadlocks.remove((x,y))
+				if (x,y) in deadlocks:			#verificar se ainda esta na lista de possiveis deadlocks
+					deadlocks.remove((x,y))		#remover da lista
+				#proximas tiles a verificar
 				if 0 <= y + 2 < n_vert:
 					queue.append((x, y + 1, x,y+2))
 				if 0 <= x + 2 < n_hor:
@@ -160,34 +162,43 @@ class SearchTree:
 					queue.append((x, y - 1, x,y-2))
 				if 0 <= x - 2 < n_hor:
 					queue.append((x - 1, y, x-2,y))
-		return deadlocks
+		return deadlocks						#retorna lista de simple deadlocks
 	
 
 	# procurar a solucao 
 	async def search(self,limit=None):
+		# set que contém os nodes já visitados, para evitar visitar várias vezes o mesmo nó
 		backtrack=set()
 		self.problem.initial._map
+		# enquanto existem nodes para pesquisar, o programa procura uma solução para o problema
 		while self.open_nodes != []:
 			await asyncio.sleep(0)
 			node = self.open_nodes.pop(0)
-			#print("allfreezes ",self.freezes)
 			self.non_terminals += 1
 			lnewnodes = []
+			# percorre todas as ações geradas pelo node
 			for a in self.problem.domain.actions(node,self.deadlocks,self.freezes):
+    			# newstate é o mapa resultante da ação
 				newstate = self.problem.domain.result(deepcopy(node.state),a,backtrack,self.deadlocks,node,self.freezes)
+				# se o mapa é válido, cria um novo node
 				if newstate != None:
 					print(newstate)
+					# newnode: novo node criado
 					newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a,newstate.boxes,newstate.keeper)
+					# se o novo node corresponde à solução não é preciso criar novo nós
 					if self.problem.goal_test(newstate):
 						self.solution = node
 						print("num of iter:",self.non_terminals)
 						print("depth:",node.depth)
 						self.terminals = len(self.open_nodes)+1
 						print("terminals:",self.terminals)
+						# o programa vai agora procurar o caminho correspondente à solução encontrada
 						return self.get_path(newnode)
+					# se a solução não é a final, guardamos o novo node e continuamos a pesquisar
 					lnewnodes.append(newnode)
+					# adicionamos o node à backtrack para não criarmos um igual noutra ocasião
 					backtrack.add((hash(frozenset(newnode.boxes)),newnode.keeper))
-					#print("lnewnodes\n\n\n",lnewnodes)
+			# adicionamos os nodes originados pelas ações à fila de nodes abertos consuante a estratégia definida em add_to_open
 			self.add_to_open(lnewnodes)
 		return None
 		
