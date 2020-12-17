@@ -173,9 +173,9 @@ class SearchTree:
 					print(newstate)
 					newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state,a),self.problem.domain.heuristic(newstate),a,newstate.boxes,newstate.keeper)
 					lnewnodes.append(newnode)
-					self.add_to_open(lnewnodes)
 					backtrack.add((hash(frozenset(newnode.boxes)),newnode.keeper))
 					#print("lnewnodes\n\n\n",lnewnodes)
+			self.add_to_open(lnewnodes)
 		return None
 		
 	@property
@@ -198,4 +198,4 @@ class SearchTree:
 			self.open_nodes.sort(key=lambda node:node.heuristic)
 		elif self.strategy == "a*":
 			self.open_nodes.extend(lnewnodes)
-			self.open_nodes.sort(key=lambda node:node.heuristic+node.cost)
+			self.open_nodes.sort(key=lambda node:node.heuristic+node.depth)
